@@ -1,19 +1,29 @@
 #include "Potentiometer.h"
+#include "ReactorPhysics.h"
+
+ReactorPhysics reactor;  // global reactor instance
 
 void setup() {
   Serial.begin(9600);
-  initPotentiometer();
+  initPotentiometer();   // initialize potentiometer hardware
 }
 
 void loop() {
-  float rod = readRodInsertion();
-  float sigma = readMac();
+  reactor.update();      // run all physics updates
 
+  float rod = 1.0f - readRodInsertion();  // invert if you want “insertion” %
   Serial.print("Rod Insertion (%): ");
-  Serial.print((1 - rod) * 100, 1);
+  Serial.print(rod * 100.0f, 1);
+
   Serial.print(" | Σ (Macroscopic): ");
-  Serial.print(sigma, 6); // show small cm^-1 values
-  Serial.println(" cm^-1");
+  Serial.print(reactor.macro, 6);
+  Serial.print(" cm^-1");
+
+  Serial.print(" | Reaction Rate: ");
+  Serial.printf("%e", reactor.reactionRate);
+
+  Serial.print(" | k_eff: ");
+  Serial.println(reactor.k, 4);
 
   delay(1000);
 }
