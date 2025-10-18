@@ -24,6 +24,9 @@ const float NEUTRON_FLUX = 1.0e13f;
 // Avogadros Number [atoms/mol]
 const float N_A = 6.022e23f;
 
+const float ROD_TOLERANCE = 5.0f;
+const float K_TOLERANCE = 0.09f;
+const unsigned long TASK_TIME_MS = 7000; // this is 7 seconds
 
 
 
