@@ -1,15 +1,40 @@
 #include "Potentiometer.h"
 #include "ReactorPhysics.h"
+#include "UserCommands.h"
 
 ReactorPhysics reactor;  // global reactor instance
+
+// BOOL TO END COMMAND 1
+bool ranCommand1 = false; 
+// BOOL TO END COMMAND 2
+bool ranCommand2 = false;
+
+// Score Value
+float totalScore = 0.0f; // this tracks points
 
 void setup() {
   Serial.begin(9600);
   initPotentiometer();   // initialize potentiometer hardware
+  initUserCommands();
+
+  Serial.println("All pins initialized. Running Simulator...");
 }
 
 void loop() {
-  reactor.update();      // run all physics updates
+  // Run command 1 exactly once (blocks up to 7 seconds)
+  if(!ranCommand1){
+    float points = getCommand1();
+    totalScore += points;
+
+    Serial.print("Total Score: ");
+    Serial.println(totalScore, 1);
+
+    ranCommand1 = true;
+  }
+
+
+   // run all physics updates
+  reactor.update();     
 
   float rod = 1.0f - readRodInsertion();  // invert if you want “insertion” %
   Serial.print("Rod Insertion (%): ");
