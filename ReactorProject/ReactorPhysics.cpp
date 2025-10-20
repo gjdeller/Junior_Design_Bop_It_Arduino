@@ -13,7 +13,7 @@ void ReactorPhysics::update() {
     float rodInsertion = readRodInsertion();  // 0–1 range
 
     // Macroscopic fission cross section
-    macro = 2 * N * SIGMA_MICRO * rodInsertion;
+    macro = 2 * N * SIGMA_MICRO * (1 - rodInsertion);
 
     // Fission rate = neutron flux × macroscopic cross section
     reactionRate = NEUTRON_FLUX * macro;

@@ -174,6 +174,9 @@ void loop() {
   Serial.print(" | Score: ");
   Serial.print(totalScore, 1);
 
+  // Print out the Fission Cross Section:
+  Serial.print(" | Macroscopic Cross Section: ");
+  Serial.print(reactor.macro);
   // Sets the current Fission Rate to the Gauge
   Serial.print(" | Fission Rate: ");
   Serial.print(currentFissionRate / 1e6, 2);
@@ -198,6 +201,8 @@ void loop() {
   }
 
   Serial.println();
+
+  
 
   delay(100);
 }

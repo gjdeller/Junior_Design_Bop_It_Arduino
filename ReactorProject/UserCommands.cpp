@@ -8,6 +8,16 @@ void initUserCommands(){
   pinMode(BTN1, INPUT_PULLUP);
   pinMode(BTN2, INPUT_PULLUP);
   pinMode(BTN3, INPUT_PULLUP);
+
+  // Reactor LEDs:
+  pinMode(R1_LED_PIN, OUTPUT);
+  pinMode(R2_LED_PIN, OUTPUT);
+  pinMode(R3_LED_PIN, OUTPUT);
+
+  // Start all LEDs off
+  digitalWrite(R1_LED_PIN, LOW);
+  digitalWrite(R2_LED_PIN, LOW);
+  digitalWrite(R3_LED_PIN, LOW);
 }
 
 // Helper: 0 = none, 1 = only BTN1, 2 = only BTN2, 3 = only BTN3, -1 = multiple
@@ -32,9 +42,12 @@ float getCommand1() {
   unsigned long startTime = millis();
   bool success = false;
 
-  if (command == 1) Serial.println("Command 1: Start Reactor 1 (press BTN1 only)");
-  else if (command == 2) Serial.println("Command 1: Start Reactor 2 (press BTN2 only)");
-  else Serial.println("Command 1: Start Reactor 3 (press BTN3 only)");
+  if (command == 1) 
+    Serial.println("Command 1: Start Reactor 1 (press BTN1 only)");
+  else if (command == 2) 
+    Serial.println("Command 1: Start Reactor 2 (press BTN2 only)");
+  else 
+    Serial.println("Command 1: Start Reactor 3 (press BTN3 only)");
 
   while (millis() - startTime < timeout) {
     int state = readExclusiveButton();
@@ -54,6 +67,12 @@ float getCommand1() {
         if (readExclusiveButton() == command) {
           Serial.print("Now Controlling Reactor ");
           Serial.println(command);
+
+          // Turn on the pin corresponding the the commands:
+          digitalWrite(R1_LED_PIN, (command == 1) ? HIGH : LOW);
+          digitalWrite(R2_LED_PIN, (command == 2) ? HIGH : LOW);
+          digitalWrite(R3_LED_PIN, (command == 3) ? HIGH : LOW);
+
           success = true;
           break;
         }

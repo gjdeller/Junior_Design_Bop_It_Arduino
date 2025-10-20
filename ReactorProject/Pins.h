@@ -14,6 +14,11 @@ const int BTN3 = 11;
 const int GREEN_LED_PIN = 8;
 const int RED_LED_PIN = 12;
 
+// Reactor LED Pins
+const int R1_LED_PIN = 5;
+const int R2_LED_PIN = 6;
+const int R3_LED_PIN = 1;
+
 // OLED Screen 1: For Now lets do Fission Rate on here:
 //#define LCD_MOSI 35 // OLED SDA
 //#define LCD_MISO -1 // GC9A01A does not use MISO
