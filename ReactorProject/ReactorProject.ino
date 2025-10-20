@@ -6,7 +6,7 @@
 #include "PhysicsConstants.h"
 #include "TaskChecker.h"   // checkTaskCompletion(...)
 #include "Pins.h"          // LED pins, button pins, etc.
-
+#include "DisplayGauge.h"
 // -------- Global Objects --------
 ReactorPhysics reactor;  // single global instance
 
@@ -45,6 +45,10 @@ void setup() {
 
   digitalWrite(GREEN_LED_PIN, LOW);
   digitalWrite(RED_LED_PIN, LOW);
+  
+  // Initialize the Fission Rate Gauge
+  Gauge_Init();
+  Gauge_SetValue(0);
 
   Serial.println("All systems initialized. Reactor Simulation running...");
 }
@@ -66,7 +70,9 @@ void loop() {
   reactor.update();
   float currentRodInsertion = readRodInsertion(); // 0.0..1.0
   float currentK            = reactor.k;
-  // float currentFissionRate = reactor.reactionRate; // available if needed
+
+  float currentFissionRate = reactor.reactionRate; // available if needed
+  Gauge_SetValue(currentFissionRate);
 
   // 3) Task management (fixed-duration with hold requirement)
   if (taskActive) {
@@ -167,6 +173,12 @@ void loop() {
 
   Serial.print(" | Score: ");
   Serial.print(totalScore, 1);
+
+  // Sets the current Fission Rate to the Gauge
+  Serial.print(" | Fission Rate: ");
+  Serial.print(currentFissionRate / 1e6, 2);
+  // Divide the value by 1e6 to make it smaller and easier to display
+  Gauge_SetValue(currentFissionRate / 1e6);
 
   // Target rod display (maintain vs fixed)
   float targetInsertion = (currentTask.requiredRodInsertion < 0.0f)
