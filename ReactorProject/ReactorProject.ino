@@ -1,146 +1,191 @@
+// ReactorProject.ino
+
 #include "Potentiometer.h"
 #include "ReactorPhysics.h"
 #include "UserCommands.h"
 #include "PhysicsConstants.h"
-#include "TaskChecker.h" // Includes the checkTaskCompletion function
-#include "Pins.h"         // Define your LED pins here
+#include "TaskChecker.h"   // checkTaskCompletion(...)
+#include "Pins.h"          // LED pins, button pins, etc.
 
-// --- Global Constants and Objects ---
+// -------- Global Objects --------
+ReactorPhysics reactor;  // single global instance
 
-// Global reactor instance (instantiated once)
-ReactorPhysics reactor;  
-
-// Global state variables for task management
+// -------- Task State --------
 TaskRequirements currentTask;
 unsigned long taskStartTime = 0;
+unsigned long taskDeadline  = 0;   // fixed end time for each task
 bool taskActive = false;
-float currentMaintainTarget = 0.5f; // Stores target for "Maintain" task
+float currentMaintainTarget = 0.5f; // for "Maintain" task
 
-// Command 1 state
-bool ranCommand1 = false; 
+// Hold requirement (prevents instant pass). Tune as desired.
+const unsigned long HOLD_MS = 2000;  // 2 seconds required in-correct-state
 
-// Score Value
-float totalScore = 0.0f; 
+// Track when condition first became true
+static bool conditionMet = false;
+static unsigned long conditionMetSince = 0;
 
-// --- Setup ---
+// LED blink (for "in spec, holding") — non-blocking
+static unsigned long ledTick = 0;
+static bool ledOn = false;
+const unsigned long GREEN_BLINK_PERIOD_MS = 250; // 2 Hz blink
 
+// -------- Game State --------
+bool ranCommand1 = false;
+float totalScore = 0.0f;
+
+// ================= Setup =================
 void setup() {
-    Serial.begin(9600);
-    
-    // Initialize hardware modules
-    initPotentiometer();
-    initUserCommands();
+  Serial.begin(9600);
 
-    // Initialize LED pins
-    pinMode(GREEN_LED_PIN, OUTPUT);
-    pinMode(RED_LED_PIN, OUTPUT);
+  initPotentiometer();
+  initUserCommands();
 
-    Serial.println("All systems initialized. Reactor Simulation running...");
+  pinMode(GREEN_LED_PIN, OUTPUT);
+  pinMode(RED_LED_PIN, OUTPUT);
+
+  digitalWrite(GREEN_LED_PIN, LOW);
+  digitalWrite(RED_LED_PIN, LOW);
+
+  Serial.println("All systems initialized. Reactor Simulation running...");
 }
 
-
-// --- Loop ---
-
+// ================= Loop =================
 void loop() {
-    // 1. COMMAND 1: Blocking execution (runs once at start)
-    if (!ranCommand1) {
-        float points = getCommand1();
-        totalScore += points;
-        ranCommand1 = true;
-        
-        Serial.print("\nInitial Score after Command 1: ");
-        Serial.println(totalScore, 1);
-        delay(1000); 
-    }
-    
-    // 2. CORE PHYSICS UPDATE: Must run every loop iteration to get current Keff!
-    reactor.update();
-    
-    // Get the latest values for task checking
-    // NOTE: Assuming readRodInsertion() returns 0.0 (rod out) to 1.0 (rod in).
-    float currentRodInsertion = readRodInsertion(); 
-    float currentK = reactor.k;
-    float currentFissionRate = reactor.reactionRate;                     
-    
-    // 3. COMMAND 2: Task Management (Non-Blocking)
-    
-    if (taskActive) {
-        
-        // A. Check for Completion using the external function
-        if (checkTaskCompletion(currentTask, currentRodInsertion, currentK, currentMaintainTarget)) {
-            Serial.println("TASK SUCCESSFUL! Score +1.");
-            digitalWrite(GREEN_LED_PIN, HIGH);
-            digitalWrite(RED_LED_PIN, LOW);
-            totalScore += 1.0f;
-            taskActive = false; 
-            // Pause briefly to register success
-            delay(1000); 
-        } 
-        
-        // B. Check for Time Expiration
-        else if (millis() - taskStartTime > TASK_TIME_MS) {
-            Serial.println("TASK FAILED! Time expired. Score reset.");
-            digitalWrite(RED_LED_PIN, HIGH);
-            digitalWrite(GREEN_LED_PIN, LOW);
-            totalScore = 0.0f; // Penalty for failure
-            taskActive = false; 
-            delay(2000); 
-        }
-        
-        // C. If task is active and incomplete
-        else {
-             // Red LED is ON to signal that a task is active and incomplete
-             digitalWrite(GREEN_LED_PIN, LOW);
-             digitalWrite(RED_LED_PIN, HIGH); 
-        }
+  // 1) Command 1 (runs once at start)
+  if (!ranCommand1) {
+    float points = getCommand1();
+    totalScore += points;
+    ranCommand1 = true;
+
+    Serial.print("\nInitial Score after Command 1: ");
+    Serial.println(totalScore, 1);
+    delay(500);
+  }
+
+  // 2) Physics update & read sensors
+  reactor.update();
+  float currentRodInsertion = readRodInsertion(); // 0.0..1.0
+  float currentK            = reactor.k;
+  // float currentFissionRate = reactor.reactionRate; // available if needed
+
+  // 3) Task management (fixed-duration with hold requirement)
+  if (taskActive) {
+    unsigned long now = millis();
+
+    // Is the task requirement currently satisfied?
+    bool okNow = checkTaskCompletion(currentTask, currentRodInsertion, currentK, currentMaintainTarget);
+
+    // Track continuous time in-correct-state
+    if (okNow) {
+      if (!conditionMet) {
+        conditionMet = true;
+        conditionMetSince = now;
+      }
+    } else {
+      conditionMet = false; // reset if user drifts out of tolerance
     }
 
-    // 4. Initiate a new command 2 task
-    if (!taskActive) {
-        delay(1000); // Wait 1 second before new task
-        
-        Serial.println("\n--- NEW TASK INITIATED ---");
-        currentTask = getCommand2();
-        
-        // Handle the special "Maintain" case
-        if (currentTask.requiredRodInsertion < 0) {
-            // Set the target to the current rod position
-            currentMaintainTarget = currentRodInsertion; 
-            Serial.print("Target: Hold rod at ");
-            Serial.print(currentMaintainTarget * 100.0f, 1);
-            Serial.println("%");
-        }
-        
-        // Reset timer and activate task state
-        taskStartTime = millis();
-        taskActive = true;
-        
-        // Reset LEDs for new active task
-        digitalWrite(RED_LED_PIN, HIGH); 
+    // Success condition if we ended now (must hold for HOLD_MS)
+    bool successIfEndedNow = (conditionMet && (now - conditionMetSince >= HOLD_MS));
+
+    // ----- LIVE LED FEEDBACK (non-blocking) -----
+    if (!okNow) {
+      // OUT OF SPEC -> solid RED
+      digitalWrite(RED_LED_PIN, HIGH);
+      digitalWrite(GREEN_LED_PIN, LOW);
+    } else if (!successIfEndedNow) {
+      // IN SPEC, but still accumulating HOLD_MS -> blink GREEN
+      if (now - ledTick >= GREEN_BLINK_PERIOD_MS) {
+        ledTick = now;
+        ledOn = !ledOn;
+      }
+      digitalWrite(GREEN_LED_PIN, ledOn ? HIGH : LOW);
+      digitalWrite(RED_LED_PIN, LOW);
+    } else {
+      // IN SPEC and HOLD MET -> solid GREEN
+      digitalWrite(GREEN_LED_PIN, HIGH);
+      digitalWrite(RED_LED_PIN, LOW);
+    }
+    // -------------------------------------------
+
+    // Rollover-safe: check if now >= deadline
+    if ((long)(now - taskDeadline) >= 0) {
+      if (successIfEndedNow) {
+        Serial.println("TASK SUCCESSFUL! Score +1.");
+        digitalWrite(GREEN_LED_PIN, HIGH);
+        digitalWrite(RED_LED_PIN, LOW);
+        totalScore += 1.0f;
+      } else {
+        Serial.println("TASK FAILED! Time expired. Score reset.");
+        digitalWrite(RED_LED_PIN, HIGH);
         digitalWrite(GREEN_LED_PIN, LOW);
+        totalScore = 0.0f;
+      }
+
+      taskActive = false;
+      delay(500); // small pause before next task
+    }
+  }
+
+  // 4) Start a new Command 2 task when idle
+  if (!taskActive) {
+    delay(500); // small breather between tasks
+    Serial.println("\n--- NEW TASK INITIATED ---");
+    currentTask = getCommand2();
+
+    // Maintain: lock current rod position as target
+    if (currentTask.requiredRodInsertion < 0.0f) {
+      currentMaintainTarget = currentRodInsertion;
+      Serial.print("Target: Hold rod at ");
+      Serial.print(currentMaintainTarget * 100.0f, 1);
+      Serial.println("%");
     }
 
-    // 5. SERIAL OUTPUT: Continuous status update
-    
-    Serial.print("Rod (%): ");
-    Serial.print(currentRodInsertion * 100.0f, 1);
-    
-    Serial.print(" | k_eff: ");
-    Serial.print(currentK, 4);
-    
-    Serial.print(" | Score: ");
-    Serial.print(totalScore, 1);
+    // Fixed-duration task window
+    taskStartTime = millis();
+    taskDeadline  = taskStartTime + TASK_TIME_MS;
+    conditionMet = false;
+    conditionMetSince = 0;
 
-    // Print time remaining
-    if (taskActive) {
-      long timeRemaining = TASK_TIME_MS - (millis() - taskStartTime);
-      Serial.print(" | Time: ");
-      // Only print if time is positive
-      if (timeRemaining > 0) Serial.print(timeRemaining / 1000.0f, 1);
-      else Serial.print(0.0f, 1);
-      Serial.print("s");
-    }
-    Serial.println();
+    // Reset blink state
+    ledTick = taskStartTime;
+    ledOn = false;
 
-    delay(100); 
+    taskActive = true;
+
+    // Start with RED on (actively working)
+    digitalWrite(RED_LED_PIN, HIGH);
+    digitalWrite(GREEN_LED_PIN, LOW);
+  }
+
+  // 5) Status output (with target rod & time remaining)
+  Serial.print("Rod (%): ");
+  Serial.print(currentRodInsertion * 100.0f, 1);
+
+  Serial.print(" | k_eff: ");
+  Serial.print(currentK, 4);
+
+  Serial.print(" | Score: ");
+  Serial.print(totalScore, 1);
+
+  // Target rod display (maintain vs fixed)
+  float targetInsertion = (currentTask.requiredRodInsertion < 0.0f)
+                          ? currentMaintainTarget
+                          : currentTask.requiredRodInsertion;
+  Serial.print(" | Target Rod: ");
+  Serial.print(targetInsertion * 100.0f, 1);
+  Serial.print("%");
+
+  // Time remaining based on fixed deadline
+  if (taskActive) {
+    long msLeft = (long)(taskDeadline - millis());
+    if (msLeft < 0) msLeft = 0;
+    Serial.print(" | Time: ");
+    Serial.print(msLeft / 1000.0f, 1);
+    Serial.print("s");
+  }
+
+  Serial.println();
+
+  delay(100);
 }

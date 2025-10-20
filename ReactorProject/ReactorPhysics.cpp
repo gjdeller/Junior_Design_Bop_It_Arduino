@@ -21,7 +21,7 @@ void ReactorPhysics::update() {
     // Thermal utilization factor
     float base_f = 0.8f;
     float min_f  = 0.4f;
-    float f = base_f - (base_f - min_f) * (1 - rodInsertion);
+    float f = base_f - (base_f - min_f) * (rodInsertion);
 
     // Four-factor formula
     const float eta = 2.05f;

@@ -1,38 +1,37 @@
-// TaskChecker.cpp
 #include "TaskChecker.h"
+#include "PhysicsConstants.h"
+#include <cmath> // for fabsf()
 
-// Note: ROD_TOLERANCE and K_TOLERANCE are accessible here via PhysicsConstants.h
+bool checkTaskCompletion(TaskRequirements currentTask,
+                         float currentRod,
+                         float currentK,
+                         float currentMaintainTarget) 
+{
+    // Normalize rod tolerance (5.0f = ±5%)
+    //const float rodTolerance = ROD_TOLERANCE / 100.0f;
 
-bool checkTaskCompletion(TaskRequirements currentTask, float currentRod, float currentK, float currentMaintainTarget
-) {
-    bool rodOK = false;
-    float targetRod = currentTask.requiredRodInsertion;
+    // --- 1. Check rod position ---
+    float targetRod = (currentTask.requiredRodInsertion < 0.0f)
+                      ? currentMaintainTarget   // "Maintain" task
+                      : currentTask.requiredRodInsertion; // Normal task
 
-    // 1. Check Rod Position
-    if (targetRod < 0) {
-        // Case 1: Maintain Current Position. Use the stored 'currentMaintainTarget'.
-        rodOK = (abs(currentRod - currentMaintainTarget) <= ROD_TOLERANCE);
-    } else {
-        // Fixed target position.
-        rodOK = (abs(currentRod - targetRod) <= ROD_TOLERANCE);
-    }
-    
-    // 2. Check K Condition
+    bool rodOK = (fabsf(currentRod - targetRod) <= ROD_TOLERANCE);
+
+    // --- 2. Check reactor k_eff condition ---
     bool kOK = false;
-    switch (currentTask.requiredK) {
-        case K_ANY:
-            kOK = true; 
-            break;
-        case K_CRITICAL:
-            kOK = (abs(currentK - 1.0f) <= K_TOLERANCE);
-            break;
-        case K_SUBCRITICAL:
-            kOK = (currentK < 1.0f);
-            break;
-        case K_SUPERCRITICAL:
-            kOK = (currentK > 1.0f);
-            break;
+    if (currentTask.requiredK == K_ANY) {
+        kOK = true;
+    }
+    else if (currentTask.requiredK == K_CRITICAL) {
+        kOK = (fabsf(currentK - 1.0f) <= K_TOLERANCE);
+    }
+    else if (currentTask.requiredK == K_SUBCRITICAL) {
+        kOK = (currentK < 1.0f);
+    }
+    else if (currentTask.requiredK == K_SUPERCRITICAL) {
+        kOK = (currentK > 1.0f);
     }
 
-    return rodOK && kOK;
+    // Task complete only if both rod and k conditions are met
+    return (rodOK && kOK);
 }
