@@ -3,7 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_GC9A01A.h>
 
-// --- Pins (same as your working sketch; change if your wiring changes) ---
+// --- Pins
 #define LCD_MOSI 35
 #define LCD_MISO -1
 #define LCD_CLK  36
@@ -15,8 +15,7 @@
 // Initialize SPI + display and draw the gauge face once
 void Gauge_Init();
 
-// Redraw the static face (only if you need to refresh everything)
 void Gauge_DrawFace();
 
-// Update the gauge needle & numeric readout with a value in [0..100]
+// This is used to update the gauge to display the current fission rate. Some issues fix later. 
 void Gauge_SetValue(float value);
