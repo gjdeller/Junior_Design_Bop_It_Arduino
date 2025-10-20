@@ -19,15 +19,21 @@ bool checkTaskCompletion(TaskRequirements currentTask,
 
     // --- 2. Check reactor k_eff condition ---
     bool kOK = false;
+
+    // Case maintain current status: any K value is fine
     if (currentTask.requiredK == K_ANY) {
         kOK = true;
     }
+    // Check if K is K_Critical this means that it is approximately = 1, and the reactor is under steady-state conditions.
     else if (currentTask.requiredK == K_CRITICAL) {
         kOK = (fabsf(currentK - 1.0f) <= K_TOLERANCE);
     }
+    // Check if K is subcritical. this means K < 1, and that the reactor is decreasing energy production. 
     else if (currentTask.requiredK == K_SUBCRITICAL) {
         kOK = (currentK < 1.0f);
     }
+
+      // Check if K = supercritical, K > 1, this means that energy is increasing
     else if (currentTask.requiredK == K_SUPERCRITICAL) {
         kOK = (currentK > 1.0f);
     }
