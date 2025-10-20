@@ -1,10 +1,9 @@
 #include "DisplayGauge.h"
 #include <SPI.h>
 
-// Internal display object (kept private to this module)
+
 static Adafruit_GC9A01A tft(&SPI, LCD_DC, LCD_CS, LCD_RST);
 
-// Gauge params (same as your original)
 static const int CX = 120;
 static const int CY = 120;
 static const int R_OUT = 110;
