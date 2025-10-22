@@ -7,6 +7,7 @@
 #include "TaskChecker.h"   // checkTaskCompletion(...)
 #include "Pins.h"          // LED pins, button pins, etc.
 #include "DisplayGauge.h"
+#include "DisplayPowerGauge.h"
 // -------- Global Objects --------
 ReactorPhysics reactor;  // single global instance
 
@@ -48,7 +49,10 @@ void setup() {
   
   // Initialize the Fission Rate Gauge
   Gauge_Init();
+  PowerGauge_Init();
+
   Gauge_SetValue(0);
+  PowerGauge_SetValue(0);
 
   Serial.println("All systems initialized. Reactor Simulation running...");
 }
@@ -70,9 +74,10 @@ void loop() {
   reactor.update();
   float currentRodInsertion = readRodInsertion(); // 0.0..1.0
   float currentK            = reactor.k;
-
+  float powerOutput         = reactor.power; 
   float currentFissionRate = reactor.reactionRate; // available if needed
-  Gauge_SetValue(currentFissionRate);
+  //PowerGauge_SetValue(currentRodInsertion);
+  //Gauge_SetValue(currentFissionRate);
 
   // 3) Task management (fixed-duration with hold requirement)
   if (taskActive) {
@@ -165,8 +170,8 @@ void loop() {
   }
 
   // 5) Status output (with target rod & time remaining)
-  Serial.print("Rod (%): ");
-  Serial.print(currentRodInsertion * 100.0f, 1);
+  //Serial.print("Rod (%): ");
+  //Serial.print(currentRodInsertion * 100.0f, 1);
 
   Serial.print(" | k_eff: ");
   Serial.print(currentK, 4);
@@ -177,16 +182,24 @@ void loop() {
   // Print out the Fission Cross Section:
   Serial.print(" | Macroscopic Cross Section: ");
   Serial.print(reactor.macro);
+
   // Sets the current Fission Rate to the Gauge
-  Serial.print(" | Fission Rate: ");
-  Serial.print(currentFissionRate / 1e6, 2);
+  //Serial.print(" | Fission Rate: ");
+  //Serial.print(currentFissionRate / 1e6, 2);
   // Divide the value by 1e6 to make it smaller and easier to display
   Gauge_SetValue(currentFissionRate / 1e6);
+
+  //Serial.print(" | Power Output [J/s]: ");
+  //Serial.print(reactor.power);
+  
 
   // Target rod display (maintain vs fixed)
   float targetInsertion = (currentTask.requiredRodInsertion < 0.0f)
                           ? currentMaintainTarget
                           : currentTask.requiredRodInsertion;
+
+  PowerGauge_SetValue(currentRodInsertion * 100.0f);
+
   Serial.print(" | Target Rod: ");
   Serial.print(targetInsertion * 100.0f, 1);
   Serial.print("%");
