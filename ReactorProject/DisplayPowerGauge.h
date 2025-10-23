@@ -16,9 +16,9 @@
 
 
 // Initialize SPI + display and draw the gauge face once
-void PowerGauge_Init();
+void ControlRodGauge_Init();
 
-void PowerGauge_DrawFace();
+void ControlRodGauge_DrawFace();
 
 // This is used to update the gauge to display the current fission rate. Some issues fix later. 
-void PowerGauge_SetValue(float value);
+void ControlRodGauge_SetValue(float value);

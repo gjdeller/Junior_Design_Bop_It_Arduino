@@ -37,7 +37,7 @@ static void drawNeedle(float deg, uint16_t color) {
   tft2.fillCircle(CX, CY, 3, GC9A01A_WHITE); // hub
 }
 
-void PowerGauge_DrawFace() {
+void ControlRodGauge_DrawFace() {
   tft2.fillScreen(GC9A01A_BLACK);
 
   // rings
@@ -77,7 +77,7 @@ void PowerGauge_DrawFace() {
   tft2.print("Power Output: ");
 }
 
-void PowerGauge_Init() {
+void ControlRodGauge_Init() {
   pinMode(BACKLIGHT_PIN, OUTPUT);
   digitalWrite(BACKLIGHT_PIN, HIGH);      // simple ON; (PWM dimming optional)
 
@@ -85,11 +85,11 @@ void PowerGauge_Init() {
   tft2.begin();                            // you can pass 40000000 for 40 MHz if stable
   tft2.setRotation(0);
 
-  PowerGauge_DrawFace();
+  ControlRodGauge_DrawFace();
   lastDeg = NAN; // reset needle state
 }
 
-void PowerGauge_SetValue(float value) {
+void ControlRodGauge_SetValue(float value) {
   float deg = valueToDeg(value);
 
   // erase old needle

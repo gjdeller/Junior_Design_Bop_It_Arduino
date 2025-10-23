@@ -12,7 +12,7 @@ public:
     float macro;
     float reactionRate;
     float k;
-    float power;
+    //float power;
 };
 
 #endif

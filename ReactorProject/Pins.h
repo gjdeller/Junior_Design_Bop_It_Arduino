@@ -6,12 +6,12 @@
 const int POT_PIN = 4;
 
 // Reactor Selection Button Inputs:
-const int BTN1 = 9; // Reactor 1
+const int BTN1 = 20; // Reactor 1
 const int BTN2 = 10; // Reactor 2
 const int BTN3 = 11;
 
 // LED Pins
-const int GREEN_LED_PIN = 8;
+const int GREEN_LED_PIN = 21;
 const int RED_LED_PIN = 12;
 
 // Reactor LED Pins

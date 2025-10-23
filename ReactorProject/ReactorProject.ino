@@ -8,6 +8,8 @@
 #include "Pins.h"          // LED pins, button pins, etc.
 #include "DisplayGauge.h"
 #include "DisplayPowerGauge.h"
+#include "LCDScreen.h"
+
 // -------- Global Objects --------
 ReactorPhysics reactor;  // single global instance
 
@@ -25,12 +27,18 @@ const unsigned long HOLD_MS = 2000;  // 2 seconds required in-correct-state
 static bool conditionMet = false;
 static unsigned long conditionMetSince = 0;
 
-// LED blink (for "in spec, holding") — non-blocking
+// LED blink (for confirmation that user is at the correct value)
+
+// this is how many times it should tick to make sure you're correct
 static unsigned long ledTick = 0;
+
+// LEd bool
 static bool ledOn = false;
+
+// This is for blinking the green led
 const unsigned long GREEN_BLINK_PERIOD_MS = 250; // 2 Hz blink
 
-// -------- Game State --------
+// bool to tell the system that command 1 has finished. 
 bool ranCommand1 = false;
 float totalScore = 0.0f;
 
@@ -38,43 +46,60 @@ float totalScore = 0.0f;
 void setup() {
   Serial.begin(9600);
 
+  // Initialize the Potentiometer and User Commands
   initPotentiometer();
   initUserCommands();
 
+  // Green LED Pin and Red LED Pin initialization for the users correct action / reactor status.
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
-
+  
+  // Initialize the LED Outputs to Low
   digitalWrite(GREEN_LED_PIN, LOW);
   digitalWrite(RED_LED_PIN, LOW);
   
   // Initialize the Fission Rate Gauge
   Gauge_Init();
-  PowerGauge_Init();
+
+  // Initialize the Power Output Gauge
+  ControlRodGauge_Init();
+  LCD_init();
 
   Gauge_SetValue(0);
-  PowerGauge_SetValue(0);
+  ControlRodGauge_SetValue(0);
 
   Serial.println("All systems initialized. Reactor Simulation running...");
 }
 
 // ================= Loop =================
 void loop() {
-  // 1) Command 1 (runs once at start)
+  // This is an if statement that checks if command1 has completed.
   if (!ranCommand1) {
+    // Get Command 1, returns a 1 or 0, depending on whether or not you get it correct
+    // Therefore, it increements by 1 point to the total score.
     float points = getCommand1();
     totalScore += points;
+
+    // Sets ran command to true after command 1
     ranCommand1 = true;
 
+    // Print out the initial score after the command
     Serial.print("\nInitial Score after Command 1: ");
+
+    // Prints out score
     Serial.println(totalScore, 1);
+
+    // delay
     delay(500);
   }
 
   // 2) Physics update & read sensors
   reactor.update();
+
+  // Receives the rod insertion, k value, fission rate for outputs and amth
   float currentRodInsertion = readRodInsertion(); // 0.0..1.0
   float currentK            = reactor.k;
-  float powerOutput         = reactor.power; 
+  //float powerOutput         = reactor.power; 
   float currentFissionRate = reactor.reactionRate; // available if needed
   //PowerGauge_SetValue(currentRodInsertion);
   //Gauge_SetValue(currentFissionRate);
@@ -83,10 +108,13 @@ void loop() {
   if (taskActive) {
     unsigned long now = millis();
 
-    // Is the task requirement currently satisfied?
+    // this bool checks if the task has been completed 
+    // so it calls the checkTaskCompletion method in the Task Checker file, which 
+    // takes in the current task (K_subcritical, K_supercritical, K_subcritical, etc) as well the current K value,
+    // rod insertion, and the target rod insertion and returns whetehr or not you got it correct
     bool okNow = checkTaskCompletion(currentTask, currentRodInsertion, currentK, currentMaintainTarget);
 
-    // Track continuous time in-correct-state
+    // if the task is compeleted,
     if (okNow) {
       if (!conditionMet) {
         conditionMet = true;
@@ -97,19 +125,23 @@ void loop() {
     }
 
     // Success condition if we ended now (must hold for HOLD_MS)
+    // If the condition is completed 
     bool successIfEndedNow = (conditionMet && (now - conditionMetSince >= HOLD_MS));
 
-    // ----- LIVE LED FEEDBACK (non-blocking) -----
+    // Checks if successful operation.
+    // If not correct, RED LED turns on.
     if (!okNow) {
-      // OUT OF SPEC -> solid RED
       digitalWrite(RED_LED_PIN, HIGH);
       digitalWrite(GREEN_LED_PIN, LOW);
-    } else if (!successIfEndedNow) {
-      // IN SPEC, but still accumulating HOLD_MS -> blink GREEN
+    } 
+    // If successful, GREEN LED will blink for 3 blinks.
+    else if (!successIfEndedNow) {
+      // Blinks green to check if it remains green for the blink period.
       if (now - ledTick >= GREEN_BLINK_PERIOD_MS) {
         ledTick = now;
         ledOn = !ledOn;
       }
+      // turns solid green if stayed in range for correct. 
       digitalWrite(GREEN_LED_PIN, ledOn ? HIGH : LOW);
       digitalWrite(RED_LED_PIN, LOW);
     } else {
@@ -119,11 +151,15 @@ void loop() {
     }
     // -------------------------------------------
 
-    // Rollover-safe: check if now >= deadline
+    // If task is completed during the countdown, increase score by 1
     if ((long)(now - taskDeadline) >= 0) {
       if (successIfEndedNow) {
         Serial.println("TASK SUCCESSFUL! Score +1.");
+
+        // set the Green LED Pin to High to show that the user successfully operated the reactor
         digitalWrite(GREEN_LED_PIN, HIGH);
+
+        // Set the Red LED pIn to low to signal that it was a correct operation
         digitalWrite(RED_LED_PIN, LOW);
         totalScore += 1.0f;
       } else {
@@ -138,10 +174,19 @@ void loop() {
     }
   }
 
-  // 4) Start a new Command 2 task when idle
+  // Start Command 2
   if (!taskActive) {
-    delay(500); // small breather between tasks
+    // Delay
+    delay(500); 
     Serial.println("\n--- NEW TASK INITIATED ---");
+
+    // Get the second command
+    // Command2: 
+    //    Increase Power (Control Rod at 25%), 
+    //    Decrease Power (Control Rod at 75%), 
+    //    Set Reactor to Critical State (Control Rod at 50%)
+    //    MELTDOWN       (Control Rods at 100%)
+    //    Maintain Power (Keep Rod at Current Position)
     currentTask = getCommand2();
 
     // Maintain: lock current rod position as target
@@ -198,7 +243,7 @@ void loop() {
                           ? currentMaintainTarget
                           : currentTask.requiredRodInsertion;
 
-  PowerGauge_SetValue(currentRodInsertion * 100.0f);
+  ControlRodGauge_SetValue(currentRodInsertion * 100.0f);
 
   Serial.print(" | Target Rod: ");
   Serial.print(targetInsertion * 100.0f, 1);

@@ -7,7 +7,7 @@ ReactorPhysics::ReactorPhysics() {
     macro = 0.0f;
     reactionRate = 0.0f;
     k = 0.0f;
-    power = 0.0f;
+    //power = 0.0f;
 }
 
 void ReactorPhysics::update() {
@@ -31,9 +31,9 @@ void ReactorPhysics::update() {
 
     k = eta * f * p * epsilon;
 
-    float power_MeV;
-    power_MeV = ENERGY_FISSION * reactionRate; // Power/Second [MeV/Second] = energy per fission [MeV/Fission] * fission rate [Fissions / Second]
-    this->power = power_MeV * 1.602e-13f; // Power MeV * Joules per MeV = Power [Joules / Second]
+    //float power_MeV;
+    //power_MeV = ENERGY_FISSION * reactionRate; // Power/Second [MeV/Second] = energy per fission [MeV/Fission] * fission rate [Fissions / Second]
+    //this->power = power_MeV * 1.602e-13f; // Power MeV * Joules per MeV = Power [Joules / Second]
 
-    Serial.print(power);
+    //Serial.print(power);
 }

@@ -68,7 +68,7 @@ void Gauge_DrawFace() {
     tft.setCursor(x - bw/2, y - bh/2);
     tft.print(buf);
   };
-  labelAt(0); labelAt(25); labelAt(50); labelAt(75); labelAt(100);
+  labelAt(25); labelAt(25); labelAt(50); labelAt(75); labelAt(100);
 
   // title
   tft.setTextSize(1);
