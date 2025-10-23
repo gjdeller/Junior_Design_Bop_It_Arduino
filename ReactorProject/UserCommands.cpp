@@ -2,12 +2,14 @@
 #include "Pins.h"
 #include "ReactorPhysics.h"
 #include <Arduino.h>
+#include "LCDScreen.h"
 
 void initUserCommands(){
   // Configures all pins and stuff for the commands
   pinMode(BTN1, INPUT_PULLUP);
   pinMode(BTN2, INPUT_PULLUP);
   pinMode(BTN3, INPUT_PULLUP);
+  pinMode(BTN4, INPUT_PULLUP);
 
   // Reactor LEDs:
   pinMode(R1_LED_PIN, OUTPUT);
@@ -18,6 +20,7 @@ void initUserCommands(){
   digitalWrite(R1_LED_PIN, LOW);
   digitalWrite(R2_LED_PIN, LOW);
   digitalWrite(R3_LED_PIN, LOW);
+
 }
 
 // Helper: 0 = none, 1 = only BTN1, 2 = only BTN2, 3 = only BTN3, -1 = multiple
@@ -35,20 +38,25 @@ static int readExclusiveButton() {
 }
 
 // Command 1 Method: Returns 1 if success, else 0
-float getCommand1() {
+float getCommand1(float score) {
   int command = random(1, 4);                // 1..3 inclusive
   const unsigned long timeout = 7000;        // 7 seconds
   const unsigned long debounceMs = 30;
   unsigned long startTime = millis();
   bool success = false;
 
-  if (command == 1) 
-    Serial.println("Command 1: Start Reactor 1 (press BTN1 only)");
-  else if (command == 2) 
-    Serial.println("Command 1: Start Reactor 2 (press BTN2 only)");
-  else 
-    Serial.println("Command 1: Start Reactor 3 (press BTN3 only)");
-
+  if (command == 1){
+    //Serial.println("Command 1: Start Reactor 1 (press BTN1 only)");
+    LCD_Display("Start Reactor 1", score);
+  }
+  else if (command == 2){
+    //Serial.println("Command 1: Start Reactor 2 (press BTN2 only)");
+    LCD_Display("Start Reactor 2", score);
+  }
+  else{
+    //Serial.println("Command 1: Start Reactor 3 (press BTN3 only)");
+    LCD_Display("Start Reactor 3", score);
+  }
   while (millis() - startTime < timeout) {
     int state = readExclusiveButton();
 
@@ -56,7 +64,8 @@ float getCommand1() {
       // No button yet -> keep waiting
     } else if (state == -1) {
       // Multiple pressed -> immediate fail
-      Serial.println("Failed: multiple buttons pressed. Shutting down grid.");
+      //Serial.println("Failed: multiple buttons pressed. Shutting down grid.");
+      LCD_Display("Failed: No Reactor Selected", score);
       success = false;
       break;
     } else {
@@ -90,46 +99,53 @@ float getCommand1() {
 
   if (!success && millis() - startTime >= timeout) {
     Serial.println("Time expired! No reactor selected.");
+    LCD_Display("Time Expired!", score);
   }
 
   return success ? 1.0f : 0.0f;
 }
 
 
-TaskRequirements getCommand2(){
+TaskRequirements getCommand2(float score){
   // success bool
   int command = random(1, 6);
   TaskRequirements task;
 
-  Serial.print("TASK: "); // This will say what task
+  //Serial.print("TASK: "); // This will say what task
   
   switch(command){
     case 1:
-      Serial.println("Maintain current reactor status");
+      //Serial.println("Maintain Power");
       task.requiredK = K_ANY;
+      LCD_Display("Maintain Power", score);
       break;
 
     case 2:
-      Serial.println("Increase Power, Remove the Control Rod to 25%");
+      //Serial.println("Increase Power, Insert to 25%");
       task.requiredK = K_SUPERCRITICAL; // K > 1
       task.requiredRodInsertion = 0.25f;
+      LCD_Display("Insert Rod 25%", score);
       break;
 
     case 3:
-      Serial.println("Decrease Power, Insert the Control Rod to 75%");
+      //Serial.println("Decrease Power, Insert to 75%");
       task.requiredK = K_SUBCRITICAL; // K < 1
       task.requiredRodInsertion = 0.75f;
+      LCD_Display("Insert Rod 75%", score);
       break;
 
     case 4:
       Serial.println("Return reactor to steady-state Conditions: Control Rod at 50%");
       task.requiredK = K_CRITICAL;
       task.requiredRodInsertion = 0.50f;
+      LCD_Display("Insert Rod 50%", score);
       break;
     case 5:
       Serial.println("MELTDOWN!!! INSERT RODS FULLY AND EMERGENCY STOP!");
       task.requiredRodInsertion = 1.0f; // insert rods the full way
       task.requiredK = K_SUBCRITICAL; // final state should be K < 1 since fission slows down bc rods are fully inserted
+      //task.requiredEStop = true;
+      LCD_Display("E-Stop! 100% Insert", score);
       break;
   }
 

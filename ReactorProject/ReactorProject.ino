@@ -77,7 +77,7 @@ void loop() {
   if (!ranCommand1) {
     // Get Command 1, returns a 1 or 0, depending on whether or not you get it correct
     // Therefore, it increements by 1 point to the total score.
-    float points = getCommand1();
+    float points = getCommand1(totalScore);
     totalScore += points;
 
     // Sets ran command to true after command 1
@@ -187,8 +187,7 @@ void loop() {
     //    Set Reactor to Critical State (Control Rod at 50%)
     //    MELTDOWN       (Control Rods at 100%)
     //    Maintain Power (Keep Rod at Current Position)
-    currentTask = getCommand2();
-
+    currentTask = getCommand2(totalScore);
     // Maintain: lock current rod position as target
     if (currentTask.requiredRodInsertion < 0.0f) {
       currentMaintainTarget = currentRodInsertion;

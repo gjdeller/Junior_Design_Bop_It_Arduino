@@ -1,5 +1,7 @@
 #include "LCDScreen.h"
-#include 
+#include "UserCommands.h"
+#include "TaskChecker.h"
+
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void LCD_init(){
@@ -8,11 +10,14 @@ void LCD_init(){
   lcd.backlight();
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("LCD Ready);");
+  lcd.print("Reactors Powered ON");
 }
 
-void LCD_Display(){
+void LCD_Display(String command, float score){
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Hello!");
+  lcd.print(command);
+  lcd.setCursor(0, 1);
+  lcd.print("Score: ");
+  lcd.print(score);
 }

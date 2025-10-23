@@ -13,10 +13,11 @@ enum K_Condition{
 struct TaskRequirements{
   float requiredRodInsertion; // this is the target rod insertion (0.00 to 1.00)
   K_Condition requiredK; // This is the required K value or state
+  //bool requiredEStop = false; // bool for emergency stop, must be set to true when metldown 
 };
 
 void initUserCommands();
-float getCommand1();
-TaskRequirements getCommand2();
+float getCommand1(float score);
+TaskRequirements getCommand2(float score);
 
 #endif

@@ -8,7 +8,10 @@ const int POT_PIN = 4;
 // Reactor Selection Button Inputs:
 const int BTN1 = 20; // Reactor 1
 const int BTN2 = 10; // Reactor 2
-const int BTN3 = 11;
+const int BTN3 = 11; // Reactor 3
+
+// Emergency Stop Button 
+const int BTN4 = 3; // Emergency Stop button
 
 // LED Pins
 const int GREEN_LED_PIN = 21;
