@@ -22,13 +22,33 @@ const int R1_LED_PIN = 5;
 const int R2_LED_PIN = 6;
 const int R3_LED_PIN = 1;
 
-// OLED Screen 1: For Now lets do Fission Rate on here:
-//#define LCD_MOSI 35 // OLED SDA
-//#define LCD_MISO -1 // GC9A01A does not use MISO
-//#define LCD_CLK 36 // OLED SCL -> SCLK
-//#define LCD_CS 13 // Chip Select
-//#define LCD_DC 14 // Data/Command
-//#define LCD_RST 15 // Reset
-//#define BACKLIGHT_PIN 7
+// Shared Pins for OLED1 (Fission Rate) and OLED2 (Control Rod)
+#define LCD_MOSI 35 // SDA for Circular OLED
+#define LCD_MISO -1 // 
+#define LCD_CLK  36 // SCK for Circular OLED
+#define BACKLIGHT_PIN 7// BLK for circular OLED
+
+// PINS for OLED 1
+#define LCD_CS   13 // CS for OLED1
+#define LCD_DC   14 // DC for OLED1
+#define LCD_RST  15 //RST for OLED1
+
+// PINS FOR OLED 2
+#define LCDB_CS 16 // CS for OLED 2
+#define LCDB_DC 17 // DC for OLED 2
+#define LCDB_RST 18 // RST for OLED 2
+
+// Pins for the LCD Commands, Score, and Countdown Display
+#define I2C_MOSI 8 // SDA
+#define I2C_MISO 9 // SCL
+
+// Pins for the Touch Sensor:
+#define ECHO_PIN 39 // ultrasonic sensor echo pin
+#define TRIG_PIN 38 // Ultrasonic Snesor Trigger Pin
+
+
+
+
+
 
 #endif

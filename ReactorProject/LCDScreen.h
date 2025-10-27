@@ -3,10 +3,10 @@
 #include <Wire.h>
 #include "UserCommands.h"
 
-#define I2C_MOSI 8 // SDA
-#define I2C_MISO 9 // SCL
+//#define I2C_MOSI 8 // SDA
+//#define I2C_MISO 9 // SCL
 
 
 void LCD_init();
 
-void LCD_Display(String command, float score);
+void LCD_Display(String command, int score, float countdown);

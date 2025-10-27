@@ -4,11 +4,12 @@
 #include "ReactorPhysics.h"
 #include "UserCommands.h"
 #include "PhysicsConstants.h"
-#include "TaskChecker.h"   // checkTaskCompletion(...)
-#include "Pins.h"          // LED pins, button pins, etc.
+#include "TaskChecker.h"
+#include "Pins.h"
 #include "DisplayGauge.h"
 #include "DisplayPowerGauge.h"
 #include "LCDScreen.h"
+#include "TouchSensor.h"
 
 // -------- Global Objects --------
 ReactorPhysics reactor;  // single global instance
@@ -16,179 +17,176 @@ ReactorPhysics reactor;  // single global instance
 // -------- Task State --------
 TaskRequirements currentTask;
 unsigned long taskStartTime = 0;
-unsigned long taskDeadline  = 0;   // fixed end time for each task
+unsigned long taskDeadline  = 0;
 bool taskActive = false;
-float currentMaintainTarget = 0.5f; // for "Maintain" task
+float currentMaintainTarget = 0.5f;
 
-// Hold requirement (prevents instant pass). Tune as desired.
-const unsigned long HOLD_MS = 2000;  // 2 seconds required in-correct-state
-
-// Track when condition first became true
+const unsigned long HOLD_MS = 2000;
 static bool conditionMet = false;
 static unsigned long conditionMetSince = 0;
-
-// LED blink (for confirmation that user is at the correct value)
-
-// this is how many times it should tick to make sure you're correct
 static unsigned long ledTick = 0;
-
-// LEd bool
 static bool ledOn = false;
+const unsigned long GREEN_BLINK_PERIOD_MS = 250;
 
-// This is for blinking the green led
-const unsigned long GREEN_BLINK_PERIOD_MS = 250; // 2 Hz blink
-
-// bool to tell the system that command 1 has finished. 
 bool ranCommand1 = false;
-float totalScore = 0.0f;
+int totalScore = 0;
+static bool eStopLatched = false;
+static int estopLastRaw = HIGH;
+static unsigned long estopChangeAt = 0;
+const unsigned long ESTOP_DEBOUNCE_MS = 25;
+unsigned long currentTaskTimeMs = TASK_TIME_MS;
+
+// <<< NEW: Track how many Command 2 tasks completed
+static int tasksCompleted = 0;
 
 // ================= Setup =================
 void setup() {
   Serial.begin(9600);
 
-  // Initialize the Potentiometer and User Commands
   initPotentiometer();
   initUserCommands();
 
-  // Green LED Pin and Red LED Pin initialization for the users correct action / reactor status.
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
-  
-  // Initialize the LED Outputs to Low
   digitalWrite(GREEN_LED_PIN, LOW);
   digitalWrite(RED_LED_PIN, LOW);
-  
-  // Initialize the Fission Rate Gauge
-  Gauge_Init();
 
-  // Initialize the Power Output Gauge
+  pinMode(BTN4, INPUT_PULLUP);
+
+  Gauge_Init();
   ControlRodGauge_Init();
   LCD_init();
+  touchSensor_init();
 
   Gauge_SetValue(0);
   ControlRodGauge_SetValue(0);
 
   Serial.println("All systems initialized. Reactor Simulation running...");
+
+  // <<< FIRST Command 1 at startup
+  Serial.println("\n--- COMMAND 1 (Startup) ---");
+  float pts = getCommand1(totalScore, currentTaskTimeMs);
+  totalScore += pts;
+  Serial.print("Score after Command 1: ");
+  Serial.println(totalScore);
+  ranCommand1 = true;  // <<< mark as done once
+  delay(500);
 }
 
 // ================= Loop =================
 void loop() {
-  // This is an if statement that checks if command1 has completed.
-  if (!ranCommand1) {
-    // Get Command 1, returns a 1 or 0, depending on whether or not you get it correct
-    // Therefore, it increements by 1 point to the total score.
-    float points = getCommand1(totalScore);
-    totalScore += points;
-
-    // Sets ran command to true after command 1
-    ranCommand1 = true;
-
-    // Print out the initial score after the command
-    Serial.print("\nInitial Score after Command 1: ");
-
-    // Prints out score
-    Serial.println(totalScore, 1);
-
-    // delay
-    delay(500);
-  }
+  // <<< Command 1 is no longer gated by ranCommand1 here.
+  // So this block is gone.
 
   // 2) Physics update & read sensors
   reactor.update();
+  float currentRodInsertion = readRodInsertion(); 
+  float currentK = reactor.k;
+  float currentFissionRate = reactor.reactionRate;
 
-  // Receives the rod insertion, k value, fission rate for outputs and amth
-  float currentRodInsertion = readRodInsertion(); // 0.0..1.0
-  float currentK            = reactor.k;
-  //float powerOutput         = reactor.power; 
-  float currentFissionRate = reactor.reactionRate; // available if needed
-  //PowerGauge_SetValue(currentRodInsertion);
-  //Gauge_SetValue(currentFissionRate);
+  bool eStopPressed = (digitalRead(BTN4) == LOW);
 
-  // 3) Task management (fixed-duration with hold requirement)
+  // 3) Task management
   if (taskActive) {
     unsigned long now = millis();
 
-    // this bool checks if the task has been completed 
-    // so it calls the checkTaskCompletion method in the Task Checker file, which 
-    // takes in the current task (K_subcritical, K_supercritical, K_subcritical, etc) as well the current K value,
-    // rod insertion, and the target rod insertion and returns whetehr or not you got it correct
-    bool okNow = checkTaskCompletion(currentTask, currentRodInsertion, currentK, currentMaintainTarget);
+    int estopRaw = digitalRead(BTN4);
+    if (estopRaw != estopLastRaw) {
+      estopLastRaw = estopRaw;
+      estopChangeAt = millis();
+    }
+    if (millis() - estopChangeAt > ESTOP_DEBOUNCE_MS) {
+      if (estopRaw == LOW) {
+        eStopLatched = true;
+      }
+    }
 
-    // if the task is compeleted,
+    // TO DO:
+    // This is for if the task is to call your manager.
+    // for now until we make a cover for the sensor if it is covered, then the light will turn green
+    // Later it will be initialized to covered, and when the cover is lifted then the sensor will turn green
+    // But here is the bool for now
+ 
+    bool calledManager = readTouchSensor();
+
+    bool okNow = checkTaskCompletion(currentTask, currentRodInsertion, currentK, currentMaintainTarget, eStopLatched, calledManager);
+
     if (okNow) {
       if (!conditionMet) {
         conditionMet = true;
         conditionMetSince = now;
       }
     } else {
-      conditionMet = false; // reset if user drifts out of tolerance
+      conditionMet = false;
     }
 
-    // Success condition if we ended now (must hold for HOLD_MS)
-    // If the condition is completed 
     bool successIfEndedNow = (conditionMet && (now - conditionMetSince >= HOLD_MS));
 
-    // Checks if successful operation.
-    // If not correct, RED LED turns on.
     if (!okNow) {
       digitalWrite(RED_LED_PIN, HIGH);
       digitalWrite(GREEN_LED_PIN, LOW);
     } 
-    // If successful, GREEN LED will blink for 3 blinks.
     else if (!successIfEndedNow) {
-      // Blinks green to check if it remains green for the blink period.
       if (now - ledTick >= GREEN_BLINK_PERIOD_MS) {
         ledTick = now;
         ledOn = !ledOn;
       }
-      // turns solid green if stayed in range for correct. 
       digitalWrite(GREEN_LED_PIN, ledOn ? HIGH : LOW);
       digitalWrite(RED_LED_PIN, LOW);
     } else {
-      // IN SPEC and HOLD MET -> solid GREEN
       digitalWrite(GREEN_LED_PIN, HIGH);
       digitalWrite(RED_LED_PIN, LOW);
     }
-    // -------------------------------------------
 
-    // If task is completed during the countdown, increase score by 1
     if ((long)(now - taskDeadline) >= 0) {
       if (successIfEndedNow) {
         Serial.println("TASK SUCCESSFUL! Score +1.");
-
-        // set the Green LED Pin to High to show that the user successfully operated the reactor
         digitalWrite(GREEN_LED_PIN, HIGH);
-
-        // Set the Red LED pIn to low to signal that it was a correct operation
         digitalWrite(RED_LED_PIN, LOW);
-        totalScore += 1.0f;
+        totalScore += 1;
+        
+        if (currentTaskTimeMs > 3000){
+          currentTaskTimeMs -= 100;
+          if (currentTaskTimeMs < 3000) currentTaskTimeMs = 3000;
+        }
+
       } else {
         Serial.println("TASK FAILED! Time expired. Score reset.");
         digitalWrite(RED_LED_PIN, HIGH);
         digitalWrite(GREEN_LED_PIN, LOW);
-        totalScore = 0.0f;
+        totalScore = 0;
+        currentTaskTimeMs = TASK_TIME_MS;
+        endLoop();
       }
 
       taskActive = false;
-      delay(500); // small pause before next task
+      delay(500);
+
+      // <<< NEW: increment task counter and rerun Command 1 every 3 tasks
+      tasksCompleted++;
+      if (tasksCompleted % 3 == 0) {
+        Serial.println("\n--- COMMAND 1 ---");
+        float pts = getCommand1(totalScore, currentTaskTimeMs);
+        totalScore += pts;
+        Serial.print("Score after Command 1: ");
+        Serial.println(totalScore);
+        delay(400);
+      }
     }
   }
 
   // Start Command 2
   if (!taskActive) {
-    // Delay
     delay(500); 
     Serial.println("\n--- NEW TASK INITIATED ---");
 
-    // Get the second command
-    // Command2: 
-    //    Increase Power (Control Rod at 25%), 
-    //    Decrease Power (Control Rod at 75%), 
-    //    Set Reactor to Critical State (Control Rod at 50%)
-    //    MELTDOWN       (Control Rods at 100%)
-    //    Maintain Power (Keep Rod at Current Position)
-    currentTask = getCommand2(totalScore);
-    // Maintain: lock current rod position as target
+    currentTask = getCommand2(totalScore, currentTaskTimeMs);
+
+    if (currentTask.requiredK == E_STOP) {
+      eStopLatched = false;
+    }
+
+
     if (currentTask.requiredRodInsertion < 0.0f) {
       currentMaintainTarget = currentRodInsertion;
       Serial.print("Target: Hold rod at ");
@@ -196,59 +194,35 @@ void loop() {
       Serial.println("%");
     }
 
-    // Fixed-duration task window
     taskStartTime = millis();
-    taskDeadline  = taskStartTime + TASK_TIME_MS;
+    taskDeadline  = taskStartTime + currentTaskTimeMs;
     conditionMet = false;
     conditionMetSince = 0;
-
-    // Reset blink state
     ledTick = taskStartTime;
     ledOn = false;
-
     taskActive = true;
 
-    // Start with RED on (actively working)
     digitalWrite(RED_LED_PIN, HIGH);
     digitalWrite(GREEN_LED_PIN, LOW);
   }
 
-  // 5) Status output (with target rod & time remaining)
-  //Serial.print("Rod (%): ");
-  //Serial.print(currentRodInsertion * 100.0f, 1);
-
+  // 5) Status output
   Serial.print(" | k_eff: ");
   Serial.print(currentK, 4);
-
   Serial.print(" | Score: ");
   Serial.print(totalScore, 1);
-
-  // Print out the Fission Cross Section:
   Serial.print(" | Macroscopic Cross Section: ");
   Serial.print(reactor.macro);
 
-  // Sets the current Fission Rate to the Gauge
-  //Serial.print(" | Fission Rate: ");
-  //Serial.print(currentFissionRate / 1e6, 2);
-  // Divide the value by 1e6 to make it smaller and easier to display
   Gauge_SetValue(currentFissionRate / 1e6);
-
-  //Serial.print(" | Power Output [J/s]: ");
-  //Serial.print(reactor.power);
-  
-
-  // Target rod display (maintain vs fixed)
   float targetInsertion = (currentTask.requiredRodInsertion < 0.0f)
                           ? currentMaintainTarget
                           : currentTask.requiredRodInsertion;
-
   ControlRodGauge_SetValue(currentRodInsertion * 100.0f);
-
   Serial.print(" | Target Rod: ");
   Serial.print(targetInsertion * 100.0f, 1);
   Serial.print("%");
 
-  // Time remaining based on fixed deadline
   if (taskActive) {
     long msLeft = (long)(taskDeadline - millis());
     if (msLeft < 0) msLeft = 0;
@@ -256,10 +230,19 @@ void loop() {
     Serial.print(msLeft / 1000.0f, 1);
     Serial.print("s");
   }
-
   Serial.println();
 
-  
-
   delay(100);
+}
+
+static void endLoop(){
+  Serial.println("Task Failed -- Ending Simulator");
+  LCD_Display("Task Failed! End Sim", 0, 0);
+
+  digitalWrite(RED_LED_PIN, HIGH);
+  digitalWrite(GREEN_LED_PIN, LOW);
+
+  while(true){
+    delay(1000);
+  }
 }

@@ -5,15 +5,38 @@
 bool checkTaskCompletion(TaskRequirements currentTask,
                          float currentRod,
                          float currentK,
-                         float currentMaintainTarget) 
+                         float currentMaintainTarget,
+                         bool eStopPressed,
+                         bool calledManager) 
 {
-    // Normalize rod tolerance (5.0f = ±5%)
-    //const float rodTolerance = ROD_TOLERANCE / 100.0f;
+    
+
 
     // --- 1. Check rod position ---
     float targetRod = (currentTask.requiredRodInsertion < 0.0f)
                       ? currentMaintainTarget   // "Maintain" task
                       : currentTask.requiredRodInsertion; // Normal task
+    
+    // Special Handling for the Emergency stop 
+
+    if (currentTask.requiredK == E_STOP){
+    //  1) Rods are fully inserted 
+    //  2) E-Stop button was pressed
+    //  3) Reactor is subcritical meaning the rods are fully in
+        bool rodFull = (std::fabs(currentRod - 1.0f) <= ROD_TOLERANCE); // checks if the rod is fully inserted
+        bool eStopOK = eStopPressed;      // checks if estop is pressed
+        bool kSub    = (currentK < 1.0f); // Checks if the reactor is subcritical
+
+        return (rodFull && eStopOK && kSub);
+    }
+
+
+    // Might be sketchy
+    // Not really sure if this fully works.
+    // This is really bare bones. 
+    if (currentTask.requiredK == CALL){
+        return calledManager;
+    }
 
     bool rodOK = (fabsf(currentRod - targetRod) <= ROD_TOLERANCE);
 

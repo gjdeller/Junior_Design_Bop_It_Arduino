@@ -1,6 +1,6 @@
 #include "DisplayPowerGauge.h"
 #include <SPI.h>
-
+#include "Pins.h"
 
 static Adafruit_GC9A01A tft2(&SPI, LCDB_DC, LCDB_CS, LCDB_RST);
 
@@ -38,7 +38,7 @@ static void drawNeedle(float deg, uint16_t color) {
 }
 
 void ControlRodGauge_DrawFace() {
-  tft2.fillScreen(GC9A01A_BLACK);
+  tft2.fillScreen(GC9A01A_BLUE);
 
   // rings
   tft2.drawCircle(CX, CY, R_OUT+4, 0x7BEF); // gray
@@ -94,14 +94,14 @@ void ControlRodGauge_SetValue(float value) {
 
   // erase old needle
   if (!isnanf(lastDeg)) {
-    drawNeedle(lastDeg, GC9A01A_BLACK);
+    drawNeedle(lastDeg, GC9A01A_BLUE);
   }
   // draw new needle
   drawNeedle(deg, GC9A01A_WHITE);
   lastDeg = deg;
 
   // numeric readout
-  tft2.fillRect(60, 150, 120, 32, GC9A01A_BLACK);
+  tft2.fillRect(60, 150, 120, 32, GC9A01A_BLUE);
   tft2.setTextSize(3);
   tft2.setTextColor(GC9A01A_WHITE);
   tft2.setCursor(70, 154);

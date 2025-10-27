@@ -12,7 +12,9 @@ bool checkTaskCompletion(
     TaskRequirements currentTask,
     float currentRod, 
     float currentK,
-    float currentMaintainTarget // Required for the "Maintain" task
+    float currentMaintainTarget,
+    bool eStopPressed, // Required for the "Maintain" task
+    bool calledManager
 );
 
 #endif

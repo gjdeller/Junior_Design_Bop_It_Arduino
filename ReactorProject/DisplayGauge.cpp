@@ -1,6 +1,6 @@
 #include "DisplayGauge.h"
 #include <SPI.h>
-
+#include "Pins.h"
 
 static Adafruit_GC9A01A tft(&SPI, LCD_DC, LCD_CS, LCD_RST);
 
@@ -38,7 +38,7 @@ static void drawNeedle(float deg, uint16_t color) {
 }
 
 void Gauge_DrawFace() {
-  tft.fillScreen(GC9A01A_BLACK);
+  tft.fillScreen(GC9A01A_BLUE);
 
   // rings
   tft.drawCircle(CX, CY, R_OUT+4, 0x7BEF); // gray
@@ -94,14 +94,14 @@ void Gauge_SetValue(float value) {
 
   // erase old needle
   if (!isnanf(lastDeg)) {
-    drawNeedle(lastDeg, GC9A01A_BLACK);
+    drawNeedle(lastDeg, GC9A01A_BLUE);
   }
   // draw new needle
   drawNeedle(deg, GC9A01A_WHITE);
   lastDeg = deg;
 
   // numeric readout
-  tft.fillRect(60, 150, 120, 32, GC9A01A_BLACK);
+  tft.fillRect(60, 150, 120, 32, GC9A01A_BLUE);
   tft.setTextSize(3);
   tft.setTextColor(GC9A01A_WHITE);
   tft.setCursor(70, 154);

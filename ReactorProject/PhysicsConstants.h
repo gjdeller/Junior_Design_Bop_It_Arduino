@@ -26,7 +26,7 @@ const float N_A = 6.022e23f;
 
 const float ROD_TOLERANCE = 10.0f;
 const float K_TOLERANCE = 0.09f;
-const unsigned long TASK_TIME_MS = 15000; // this is 7 seconds
+const unsigned long TASK_TIME_MS = 10000; // this is 10 seconds
 
 
 
