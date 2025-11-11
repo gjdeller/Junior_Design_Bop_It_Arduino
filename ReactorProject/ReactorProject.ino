@@ -10,7 +10,7 @@
 #include "DisplayPowerGauge.h"
 #include "LCDScreen.h"
 #include "TouchSensor.h"
-
+#include "AudioPlayer.h"
 // -------- Global Objects --------
 ReactorPhysics reactor;  // single global instance
 
@@ -55,8 +55,9 @@ void setup() {
 
   Gauge_Init();
   ControlRodGauge_Init();
-  LCD_init();
+  //LCD_init();
   touchSensor_init();
+  //AudioPlayer_init();
 
   Gauge_SetValue(0);
   ControlRodGauge_SetValue(0);
@@ -237,7 +238,7 @@ void loop() {
 
 static void endLoop(){
   Serial.println("Task Failed -- Ending Simulator");
-  LCD_Display("Task Failed! End Sim", 0, 0);
+  //_Display("Task Failed! End Sim", 0, 0);
 
   digitalWrite(RED_LED_PIN, HIGH);
   digitalWrite(GREEN_LED_PIN, LOW);

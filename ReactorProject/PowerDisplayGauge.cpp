@@ -4,6 +4,7 @@
 
 static Adafruit_GC9A01A tft2(&SPI, LCDB_DC, LCDB_CS, LCDB_RST);
 
+
 static const int CX = 120;
 static const int CY = 120;
 static const int R_OUT = 110;
@@ -34,11 +35,11 @@ static void drawNeedle(float deg, uint16_t color) {
   int x,y;
   polar(CX, CY, R_NEEDLE, deg, x, y);
   tft2.drawLine(CX, CY, x, y, color);
-  tft2.fillCircle(CX, CY, 3, GC9A01A_WHITE); // hub
+  tft2.fillCircle(CX, CY, 3, GC9A01A_RED); // hub
 }
 
 void ControlRodGauge_DrawFace() {
-  tft2.fillScreen(GC9A01A_BLUE);
+  tft2.fillScreen(GC9A01A_WHITE);
 
   // rings
   tft2.drawCircle(CX, CY, R_OUT+4, 0x7BEF); // gray
@@ -56,7 +57,7 @@ void ControlRodGauge_DrawFace() {
   }
 
   // labels 0,25,50,75,100
-  tft2.setTextColor(GC9A01A_WHITE);
+  tft2.setTextColor(GC9A01A_BLACK);
   tft2.setTextSize(2);
   auto labelAt = [&](int v){
     float deg = valueToDeg(v);
@@ -82,8 +83,9 @@ void ControlRodGauge_Init() {
   digitalWrite(BACKLIGHT_PIN, HIGH);      // simple ON; (PWM dimming optional)
 
   SPI.begin(LCD_CLK, LCD_MISO, LCD_MOSI); // (SCLK, MISO, MOSI)
-  tft2.begin();                            // you can pass 40000000 for 40 MHz if stable
+  tft2.begin(4000000);
   tft2.setRotation(0);
+  delay(10);
 
   ControlRodGauge_DrawFace();
   lastDeg = NAN; // reset needle state
@@ -94,18 +96,19 @@ void ControlRodGauge_SetValue(float value) {
 
   // erase old needle
   if (!isnanf(lastDeg)) {
-    drawNeedle(lastDeg, GC9A01A_BLUE);
+    drawNeedle(lastDeg, GC9A01A_WHITE);
   }
   // draw new needle
-  drawNeedle(deg, GC9A01A_WHITE);
+  drawNeedle(deg, GC9A01A_RED);
   lastDeg = deg;
 
   // numeric readout
-  tft2.fillRect(60, 150, 120, 32, GC9A01A_BLUE);
+  tft2.fillRect(60, 150, 120, 32, GC9A01A_WHITE);
   tft2.setTextSize(3);
-  tft2.setTextColor(GC9A01A_WHITE);
+  tft2.setTextColor(GC9A01A_BLACK);
   tft2.setCursor(70, 154);
   char buf[16];
   snprintf(buf, sizeof(buf), "%3d", (int)roundf(value));
   tft2.print(buf);
+  tft2.print(" Rod %");
 }
