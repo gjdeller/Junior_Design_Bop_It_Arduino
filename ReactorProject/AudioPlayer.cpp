@@ -30,7 +30,7 @@ void AudioPlayer_init() {
     return;
   }
 
-  player.volume(20);   // 0..30
+  player.volume(25);   // 0..30
   delay(200);
 
   audioReady = true;
@@ -45,7 +45,7 @@ void playAudio(int track) {
 
   // clamp to 1..7 (your track list)
   if (track < 1) track = 1;
-  if (track > 7) track = 7;
+  if (track > 13) track = 13;
 
   player.play((uint16_t)track);  // expects /mp3/0001.mp3, /mp3/0002.mp3, ...
   Serial.print("[Audio] Playing track "); Serial.println(track);

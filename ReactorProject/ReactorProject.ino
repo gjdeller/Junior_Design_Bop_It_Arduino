@@ -52,17 +52,30 @@ void setup() {
   digitalWrite(RED_LED_PIN, LOW);
 
   pinMode(BTN4, INPUT_PULLUP);
+  pinMode(STRT, INPUT_PULLUP);
+  pinMode(RST_BTN, INPUT_PULLUP);
 
   Gauge_Init();
   ControlRodGauge_Init();
-  //LCD_init();
+  LCD_init();
   touchSensor_init();
-  //AudioPlayer_init();
+  AudioPlayer_init();
 
   Gauge_SetValue(0);
   ControlRodGauge_SetValue(0);
 
-  Serial.println("All systems initialized. Reactor Simulation running...");
+  Serial.println("All systems initialized.");
+  Serial.println("Press Start to Play");
+  LCD_Display("Press Start to Play Game", 0, 0.0f);
+  
+  
+  while(digitalRead(STRT) == HIGH){
+    delay(10);
+  }
+
+  delay(50);
+  while(digitalRead(STRT) == LOW);
+  delay(50);
 
   // <<< FIRST Command 1 at startup
   Serial.println("\n--- COMMAND 1 (Startup) ---");
@@ -87,6 +100,10 @@ void loop() {
 
   bool eStopPressed = (digitalRead(BTN4) == LOW);
 
+  // Software Reset Here:
+  if(digitalRead(RST_BTN) == LOW){
+    ESP.restart();
+  }
   // 3) Task management
   if (taskActive) {
     unsigned long now = millis();
@@ -233,16 +250,26 @@ void loop() {
   }
   Serial.println();
 
+  if(totalScore > 99){
+    Serial.print("Congratulations You Won!");
+    endLoop();
+  }
+
   delay(100);
 }
 
 static void endLoop(){
   Serial.println("Task Failed -- Ending Simulator");
-  //_Display("Task Failed! End Sim", 0, 0);
+  LCD_Display("Task Failed! End Sim", 0, 0);
 
   digitalWrite(RED_LED_PIN, HIGH);
   digitalWrite(GREEN_LED_PIN, LOW);
 
+  // Software Reset Here:
+  if(digitalRead(RST_BTN) == LOW){
+    LCD_Display("Reset to Play Again", 0, 0.0f);
+    ESP.restart();
+  }
   while(true){
     delay(1000);
   }

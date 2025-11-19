@@ -2,6 +2,10 @@
 #define PINS_H
 #include <Arduino.h>
 
+
+// Start Button Pin
+const int STRT = 2;
+const int RST_BTN = 0;
 // Potentiometer Pins
 const int POT_PIN = 4;
 

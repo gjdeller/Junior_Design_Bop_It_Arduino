@@ -17,7 +17,7 @@ void initPotentiometer() {
 
 float readRodInsertion() {
   int analogValue = analogRead(POT_PIN); // should be between 0 and 4095
-  float voltage = floatmap(analogValue, 0, 4095, 0.0, 3.3);
-  float rodInsertion = voltage / 3.3; // normalize: 0.0 (withdrawn) to 1.0 (inserted)
+  float voltage = floatmap(analogValue, 0, 4095, 0.0, 3.1);
+  float rodInsertion = voltage / 3.1; // normalize: 0.0 (withdrawn) to 1.0 (inserted)
   return rodInsertion;
 }

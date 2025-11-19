@@ -66,7 +66,7 @@ float getCommand1(int score, float time) {
     } else if (state == -1) {
       // Multiple pressed -> immediate fail
       Serial.println("Failed: multiple buttons pressed. Shutting down grid.");
-      //LCD_Display("Failed: No Reactor Selected", score, time);
+      LCD_Display("Failed: No Reactor Selected", score, time);
       success = false;
       break;
     } else {
@@ -100,7 +100,7 @@ float getCommand1(int score, float time) {
 
   if (!success && millis() - startTime >= timeout) {
     Serial.println("Time expired! No reactor selected.");
-    //LCD_Display("Time Expired!", score);
+    LCD_Display("Time Expired!", score, time);
   }
 
   return success ? 1.0f : 0.0f;
@@ -110,7 +110,7 @@ float getCommand1(int score, float time) {
 TaskRequirements getCommand2(int score, float time){
   // success bool
   int command = random(1, 8);
-  //int command = 7;
+  //int command = 6;
   TaskRequirements task;
 
   //Serial.print("TASK: "); // This will say what task
@@ -121,7 +121,7 @@ TaskRequirements getCommand2(int score, float time){
       playAudio(1);
       delay(1000);
       task.requiredK = K_ANY;
-      //LCD_Display("Maintain Power", score, time);
+      LCD_Display("Maintain Power", score, time);
       
       break;
 
@@ -131,55 +131,55 @@ TaskRequirements getCommand2(int score, float time){
       delay(1000);
       task.requiredK = K_SUPERCRITICAL; // K > 1
       task.requiredRodInsertion = 0.25f;
-      //LCD_Display("Insert Rod 25%", score, time);
+      LCD_Display("Insert Rod 25%", score, time);
       
       break;
 
     case 3:
       Serial.println("Decrease Power, Insert to 75%");
-      playAudio(4);
+      playAudio(7);
       delay(1000);
       task.requiredK = K_SUBCRITICAL; // K < 1
       task.requiredRodInsertion = 0.75f;
-      //LCD_Display("Insert Rod 75%", score, time);
+      LCD_Display("Insert Rod 75%", score, time);
       
       break;
 
     case 4:
       Serial.println("Return reactor to steady-state Conditions: Control Rod at 50%");
-      playAudio(2);
+      playAudio(5);
       delay(1000);
       task.requiredK = K_CRITICAL;
       task.requiredRodInsertion = 0.50f;
-      //LCD_Display("Insert Rod 50%", score, time);
+      LCD_Display("Insert Rod 50%", score, time);
       
       break;
     case 5:
       Serial.println("Produce Zero Power, Insert to 100%");
-      playAudio(5);
+      playAudio(9);
       delay(1000);
       task.requiredRodInsertion = 1.0f; // insert rods the full way
       task.requiredK = K_SUBCRITICAL; // final state should be K < 1 since fission slows down bc rods are fully inserted
       //task.requiredEStop = true;
-      //LCD_Display("Insert Rod 100%", score, time);
+      LCD_Display("Insert Rod 100%", score, time);
       
       break;
     case 6:
       Serial.println("MELTDOWN and EMERGENCY STOP: INSRT RODS FULLY + ESTOP");
-      playAudio(6);
+      playAudio(11);
       delay(1000);
       task.requiredRodInsertion = 1.0f;
       task.requiredK = E_STOP;
-      //LCD_Display("E-Stop & Ins 100%", score, time);
+      LCD_Display("E-Stop & Ins 100%", score, time);
       
       break;
 
     case 7:
       Serial.println("CALL YOUR MANAGER");
-      playAudio(7);
+      playAudio(13);
       delay(1000);
       task.requiredK = CALL;
-      //LCD_Display("Call Manager", score, time);
+      LCD_Display("Call Manager", score, time);
       
   }
 
